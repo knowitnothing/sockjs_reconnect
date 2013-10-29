@@ -78,6 +78,9 @@ class SockReconnect
                 connfunc()
             setTimeout(callback, @reconnect.retry_curr_timeout)
 
+    send: (data) =>
+        @conn.send(data)
+
     on_open: =>
         @reconnect_reset()
         @update_status()
