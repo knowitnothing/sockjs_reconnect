@@ -19,23 +19,28 @@ class SockReconnect
 
     conn: null
 
-    constructor: (@cli_path, @status_cb, @cli_onmessage, options) ->
+    constructor: (@cli_path, options, @status_cb,
+                  @cli_onmessage, @cli_onopen, @cli_onclose) ->
         $.extend(@reconnect, options)
 
     update_status: =>
         if @reconnect.reconnecting
-            @status_cb('reconnecting')
+            if @status_cb?
+                @status_cb('reconnecting')
         else if (@conn == null or @conn.readyState != SockJS.OPEN)
-            @status_cb('disconnected')
+            if @status_cb?
+                @status_cb('disconnected')
         else
-            @status_cb('connected')
+            if @status_cb?
+                @status_cb('connected')
 
     connect: =>
         if @conn?
             @conn.close()
             @conn = null
         @conn = new SockJS(@cli_path)
-        @status_cb('connecting')
+        if @status_cb?
+            @status_cb('connecting')
         
         @conn.onopen = @on_open
         @conn.onclose = @on_close
@@ -76,10 +81,14 @@ class SockReconnect
     on_open: =>
         @reconnect_reset()
         @update_status()
+        if @cli_onopen?
+            @cli_onopen()
 
     on_close: =>
         @conn = null
         @update_status()
+        if @cli_onclose?
+            @cli_onclose()
         if @reconnect.do_not_reconnect
             return
         @reconnect_try(@connect)
