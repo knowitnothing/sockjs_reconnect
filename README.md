@@ -33,16 +33,16 @@ using the module (try stopping/starting the server):
       new_status = function(status) {
         $('#status').text(status);
         if (status === 'connected') {
-          sock.conn.send('ping');
+          sock.send('ping');
         }
       }
       on_message = function(msg) {
         $('#last-message').text(msg.data);
-        setTimeout(function() { if (sock.conn) { sock.conn.send('ping'); } },
+        setTimeout(function() { if (sock.conn) { sock.send('ping'); } },
           150);
       }
 
-      var sock = new SockReconnect('/sock', new_status, on_message);
+      var sock = new SockReconnect('/sock', null, new_status, on_message);
       if (window.addEventListener) {
         window.addEventListener('load', sock.connect, false);
       } else {
