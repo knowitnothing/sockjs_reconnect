@@ -19,32 +19,46 @@ class SockReconnect
 
     conn: null
 
-    constructor: (@cli_path, options, @status_cb,
-                  @cli_onmessage, @cli_onopen, @cli_onclose) ->
+    eventHandlers:
+        'reconnect': []
+        'connect': []
+        'open': []
+        'close': []
+        'message': []
+
+    constructor: (@cli_path, options, @onmessage, @onopen, @onclose) ->
+        # TODO add internal extend functionality
         $.extend(@reconnect, options)
+
+    on: (event, handler)=>
+        events = event.trim().split(/\s+/)
+        for event in events
+            handlers = @eventHandlers[event]
+            handlers.push(handler)
+        return this
 
     update_status: =>
         if @reconnect.reconnecting
-            if @status_cb?
-                @status_cb('reconnecting')
+            for handler in @eventHandlers['reconnect']
+                handler()
         else if (@conn == null or @conn.readyState != SockJS.OPEN)
-            if @status_cb?
-                @status_cb('disconnected')
+            for handler in @eventHandlers['close']
+                handler()
         else
-            if @status_cb?
-                @status_cb('connected')
+            for handler in @eventHandlers['open']
+                handler()
 
     connect: =>
         if @conn?
             @conn.close()
             @conn = null
         @conn = new SockJS(@cli_path)
-        if @status_cb?
-            @status_cb('connecting')
-        
+        for handler in @eventHandlers['connect']
+            handler()
+
         @conn.onopen = @on_open
         @conn.onclose = @on_close
-        @conn.onmessage = @cli_onmessage
+        @conn.onmessage = @on_message
 
     reconnect_reset: =>
         @reconnect.reconnecting = false
@@ -84,18 +98,20 @@ class SockReconnect
     on_open: =>
         @reconnect_reset()
         @update_status()
-        if @cli_onopen?
-            @cli_onopen()
+        @onopen?()
 
     on_close: =>
         @conn = null
         @update_status()
-        if @cli_onclose?
-            @cli_onclose()
+        @onclose?()
         if @reconnect.do_not_reconnect
             return
         @reconnect_try(@connect)
 
+    on_message: (args...)=>
+        @onmessage?.apply(args)
+        for handler in @eventHandlers['message']
+            handler.apply(this.conn, args)
 
 root = exports ? this
 root.SockReconnect = SockReconnect

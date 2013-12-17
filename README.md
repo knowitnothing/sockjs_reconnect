@@ -22,37 +22,63 @@ using the module (try stopping/starting the server):
 ```html
 <!DOCTYPE html>
 <html>
-  <head>
-    <script src="http://cdnjs.cloudflare.com/ajax/libs/zepto/1.0/zepto.min.js">
-    </script>
-    <script src="http://cdn.sockjs.org/sockjs-0.3.min.js"></script>
-    <script src="/static/sockjs_reconnect.min.js"></script>
-    <script>
-      /* Example usage. */
+<head>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/zepto/1.0/zepto.min.js"></script>
+  <script src="http://cdn.sockjs.org/sockjs-0.3.min.js"></script>
+  <script src="/static/sockjs_reconnect.js"></script>
+  <script>
+    /* Example usage. */
 
-      new_status = function(status) {
-        $('#status').text(status);
-        if (status === 'connected') {
-          sock.send('ping');
-        }
-      }
-      on_message = function(msg) {
-        $('#last-message').text(msg.data);
-        setTimeout(function() { if (sock.conn) { sock.send('ping'); } },
+    on_message = function (msg) {
+      console.log(arguments);
+      $('#last-message').text(msg.data);
+      setTimeout(function () { if (sock.conn) { sock.send('ping'); } },
           150);
-      }
+    };
 
-      var sock = new SockReconnect('/sock', null, new_status, on_message);
-      if (window.addEventListener) {
-        window.addEventListener('load', sock.connect, false);
-      } else {
-        window.attachEvent('onload', sock.connect);
-      }
-    </script>
-  </head>
-  <body>
-    <p>Connection status: <span id="status">Disconnected</span></p>
-    <p>Last message: <span id="last-message"></span></p>
-  </body>
+    var sock = new SockReconnect('/sock');
+
+    sock
+        .on('message', on_message)
+        .on('open', function () {
+          $('#status').text("Connected")
+        })
+        .on('close', function () {
+          $('#status').text("Disconnected")
+        })
+        .on('connect reconnect', function () {
+          $('#status').text("Connecting...")
+        })
+        .on('open', function () {
+          sock.send('ping');
+        });
+
+    if (window.addEventListener) {
+      window.addEventListener('load', sock.connect, false);
+    } else {
+      window.attachEvent('onload', sock.connect);
+    }
+  </script>
+</head>
+<body>
+<p>Connection status: <span id="status">Disconnected</span></p>
+
+<p>Last message: <span id="last-message"></span></p>
+</body>
 </html>
 ```
+
+Events
+=======
+
+To attach listeners to events use `.on(event, handler)` methods.  
+`event` - string, containing one or several events (separated by whitespace)  
+`handler` - function.
+
+###Currently supported events
+
+`open` - connection is established    
+`close` - connection is closed    
+`connect` - fires on all connection attempts    
+`reconnect` - fires only on reconnection attempts    
+`message` - message received. Handler is called with the same arguments as `websocket.onmessage`
